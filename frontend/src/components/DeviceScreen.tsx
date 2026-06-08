@@ -63,7 +63,9 @@ export const DeviceScreen = forwardRef<DeviceScreenHandle, Props>(function Devic
             onStatus?.('当前浏览器不支持 WebCodecs，无法解码 H264');
             return;
           }
-          decoderRef.current = new H264Decoder(canvas);
+          decoderRef.current = new H264Decoder(canvas, (w, h) => {
+            sizeRef.current = { w, h }; // 用真实解码尺寸校正触摸坐标映射
+          });
         }
         decoderRef.current.decode(frame);
       },

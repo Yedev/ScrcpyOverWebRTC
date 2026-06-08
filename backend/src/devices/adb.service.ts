@@ -107,6 +107,9 @@ export class AdbService {
    * 这里给出 scrcpy 2.x 风格的调用骨架。
    */
   startScrcpyServer(serial: string, remoteJar: string, opts: StreamOptions, scrcpyVersion = '2.4'): ChildProcess {
+    // 关闭 dummy 字节 / 设备名 / 编码元数据等版本敏感的前缀，只保留逐帧头
+    // (send_frame_meta=true → 每帧前 8B PTS + 4B size)，把握手解析风险降到最低。
+    // 连接顺序(tunnel_forward)：先 video socket，再 control socket。
     const args = [
       '-s',
       serial,
@@ -123,6 +126,9 @@ export class AdbService {
       `video_bit_rate=${opts.bitrate}`,
       `max_fps=${opts.maxFps}`,
       'send_frame_meta=true',
+      'send_device_meta=false',
+      'send_codec_meta=false',
+      'send_dummy_byte=false',
     ];
     this.logger.log(`Starting scrcpy-server on ${serial}: ${args.join(' ')}`);
     const child = spawn(this.adb, args, { windowsHide: true });

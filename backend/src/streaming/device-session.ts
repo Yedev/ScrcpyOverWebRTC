@@ -47,6 +47,7 @@ export class DeviceSession {
     private readonly cb: SessionCallbacks,
     private readonly scrcpyRemoteJar: string,
     private readonly scrcpyLocalJar: string,
+    private readonly scrcpyVersion: string,
     opts?: Partial<StreamOptions>,
   ) {
     this.opts = { ...DEFAULT_STREAM_OPTIONS, ...opts };
@@ -73,15 +74,16 @@ export class DeviceSession {
     try {
       await this.adb.push(serial, this.scrcpyLocalJar, this.scrcpyRemoteJar);
       this.forwardPort = await this.adb.forwardScrcpy(serial);
-      this.serverProc = this.adb.startScrcpyServer(serial, this.scrcpyRemoteJar, this.opts);
+      this.serverProc = this.adb.startScrcpyServer(serial, this.scrcpyRemoteJar, this.opts, this.scrcpyVersion);
 
       // tunnel_forward 模式下客户端主动连接；第一条为视频，第二条为控制。
       this.videoSocket = await this.connectWithRetry(this.forwardPort);
       this.controlSocket = await this.connectWithRetry(this.forwardPort);
       this.videoSocket.on('error', (e) => this.fail(`video socket: ${e.message}`));
       this.controlSocket.on('error', (e) => this.fail(`control socket: ${e.message}`));
+      this.logger.log(`[${serial}] sockets connected, reading H264 frames…`);
 
-      await this.readVideoHeaderAndFrames(this.videoSocket);
+      await this.readFrames(this.videoSocket);
     } catch (e) {
       this.fail((e as Error).message);
     }
@@ -99,17 +101,14 @@ export class DeviceSession {
   }
 
   /**
-   * 解析 scrcpy 视频流：dummy 字节 + 64B 设备名 + 编码元数据，随后帧循环：
-   * [PTS(8B, 高位含 config/keyframe 标志)][size(4B)][H264 数据]。
-   * 帧头布局需与 scrcpy 版本对齐（send_frame_meta=true）。
+   * 读取 scrcpy 视频流。已在启动参数里关闭 dummy/设备名/编码元数据前缀，
+   * 因此这里直接进入帧循环（send_frame_meta=true）：
+   *   [PTS(8B, 高 2 位含 config/keyframe 标志)][size(4B)][H264 数据]。
+   * 帧头布局需与 scrcpy 版本对齐。
    */
-  private async readVideoHeaderAndFrames(sock: Socket) {
+  private async readFrames(sock: Socket) {
     const reader = new SocketReader(sock);
-    await reader.read(1); // dummy byte (tunnel_forward)
-    const nameBuf = await reader.read(64);
-    const deviceName = nameBuf.toString('utf-8').replace(/\0+$/, '');
-    this.logger.log(`[${this.device.serial}] scrcpy device name: ${deviceName}`);
-
+    let logged = false;
     while (!this.stopped) {
       const meta = await reader.read(12);
       const ptsRaw = meta.readBigUInt64BE(0);
@@ -118,6 +117,12 @@ export class DeviceSession {
       const keyframe = (ptsRaw & PTS_FLAG_KEYFRAME) !== 0n;
       const pts = ptsRaw & ~(PTS_FLAG_CONFIG | PTS_FLAG_KEYFRAME);
       const data = await reader.read(size);
+      if (!logged) {
+        this.logger.log(
+          `[${this.device.serial}] first packet: size=${size} config=${config} keyframe=${keyframe}`,
+        );
+        logged = true;
+      }
       this.cb.onVideo({
         config,
         keyframe,

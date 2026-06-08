@@ -15,7 +15,10 @@ export class H264Decoder {
   private configData?: Uint8Array; // SPS/PPS，附加到首个关键帧
   private ctx: CanvasRenderingContext2D | null;
 
-  constructor(private readonly canvas: HTMLCanvasElement) {
+  constructor(
+    private readonly canvas: HTMLCanvasElement,
+    private readonly onResize?: (w: number, h: number) => void,
+  ) {
     this.ctx = canvas.getContext('2d');
   }
 
@@ -58,8 +61,11 @@ export class H264Decoder {
 
   private render(frame: any) {
     if (this.ctx) {
-      if (this.canvas.width !== frame.displayWidth) this.canvas.width = frame.displayWidth;
-      if (this.canvas.height !== frame.displayHeight) this.canvas.height = frame.displayHeight;
+      if (this.canvas.width !== frame.displayWidth || this.canvas.height !== frame.displayHeight) {
+        this.canvas.width = frame.displayWidth;
+        this.canvas.height = frame.displayHeight;
+        this.onResize?.(frame.displayWidth, frame.displayHeight);
+      }
       this.ctx.drawImage(frame, 0, 0);
     }
     frame.close();

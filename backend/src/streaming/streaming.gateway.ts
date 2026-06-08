@@ -86,6 +86,7 @@ export class StreamingGateway implements OnApplicationBootstrap {
       },
       this.config.get('scrcpyServerRemote', { infer: true }),
       this.config.get('scrcpyServerLocal', { infer: true }),
+      this.config.get('scrcpyVersion', { infer: true }),
     );
 
     ws.on('message', (data, isBinary) => {

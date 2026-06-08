@@ -9,6 +9,7 @@ export interface AppConfig {
   adbPath: string;
   scrcpyServerRemote: string;
   scrcpyServerLocal: string;
+  scrcpyVersion: string;
   corsOrigin: string;
 }
 
@@ -26,5 +27,6 @@ export default (): AppConfig => ({
   adbPath: process.env.ADB_PATH ?? 'adb',
   scrcpyServerRemote: process.env.SCRCPY_SERVER_REMOTE ?? '/data/local/tmp/scrcpy-server.jar',
   scrcpyServerLocal: process.env.SCRCPY_SERVER_LOCAL ?? './assets/scrcpy-server.jar',
+  scrcpyVersion: process.env.SCRCPY_VERSION ?? '2.4',
   corsOrigin: process.env.CORS_ORIGIN ?? '*',
 });
