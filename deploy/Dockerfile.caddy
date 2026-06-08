@@ -1,0 +1,12 @@
+# 构建前端静态资源，并塞进 Caddy 镜像（Caddy 负责 TLS + 托管 + 反代）
+# 构建上下文为仓库根目录（见 docker-compose.yml 的 context: ..）
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+FROM caddy:2-alpine
+COPY deploy/Caddyfile /etc/caddy/Caddyfile
+COPY --from=build /app/dist /srv

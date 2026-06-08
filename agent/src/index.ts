@@ -3,7 +3,7 @@
 // host 模式：在装有 adb 的机器上运行，通过 adb 驱动 USB/网络连接的设备。
 import { loadConfig } from './config';
 import { Scrcpy } from './scrcpy';
-import { WebRTCHub } from './webrtc';
+import { WebRTCHub, IceServer } from './webrtc';
 import { Signaling } from './signaling';
 
 async function main() {
@@ -17,7 +17,12 @@ async function main() {
   const scrcpy = new Scrcpy(cfg);
   await scrcpy.start();
 
-  const hub = new WebRTCHub(scrcpy, cfg.stunUrl);
+  const iceServers: IceServer[] = [{ urls: cfg.stunUrl }];
+  if (cfg.turnUrl) {
+    iceServers.push({ urls: cfg.turnUrl, username: cfg.turnUsername, credential: cfg.turnCredential });
+    console.log(`[agent] using TURN: ${cfg.turnUrl}`);
+  }
+  const hub = new WebRTCHub(scrcpy, iceServers);
   const signaling = new Signaling(cfg, hub);
   hub.setSender(signaling);
 

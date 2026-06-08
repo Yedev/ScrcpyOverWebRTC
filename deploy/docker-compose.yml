@@ -1,0 +1,72 @@
+# CloudPhone 生产部署（有域名 + 远程物理手机 / P2P）
+# 服务器上跑：Caddy(自动HTTPS) + backend(信令/REST) + coturn(TURN兜底)
+# agent 不在这里——它装在每台手机旁的机器上，主动拨出连本服务器（见 deploy/README.md）
+#
+# 用法：cp .env.example .env && 改好 .env，然后  docker compose up -d --build
+services:
+  # 边缘：TLS 终结 + 托管前端静态 + 反代 /api 与 /ws 到后端
+  caddy:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.caddy
+    container_name: cloudphone-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+      BACKEND_ORIGIN: backend:3000
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+  # 后端：REST + WS中继 + WebRTC 信令
+  backend:
+    build:
+      context: ../backend
+    container_name: cloudphone-backend
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      NODE_ENV: production
+      MOCK_DEVICES: "false"
+      JWT_SECRET: ${JWT_SECRET}
+      AGENT_KEY: ${AGENT_KEY}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      CORS_ORIGIN: https://${DOMAIN}
+      STUN_URL: stun:stun.l.google.com:19302
+      TURN_URL: turn:${PUBLIC_IP}:3478?transport=udp
+      TURN_USERNAME: ${TURN_USER}
+      TURN_CREDENTIAL: ${TURN_PASS}
+    volumes:
+      - ./data:/app/data
+    expose:
+      - "3000"
+
+  # TURN/STUN：跨公网 P2P 打洞失败时中转媒体。host 网络以使用大段中继端口。
+  coturn:
+    image: coturn/coturn:latest
+    container_name: cloudphone-coturn
+    restart: unless-stopped
+    network_mode: host
+    command:
+      - -n
+      - --log-file=stdout
+      - --listening-port=3478
+      - --fingerprint
+      - --lt-cred-mech
+      - --user=${TURN_USER}:${TURN_PASS}
+      - --realm=cloudphone
+      - --external-ip=${PUBLIC_IP}
+      - --min-port=49160
+      - --max-port=49200
+      - --no-cli
+      - --no-tls
+      - --no-dtls
+
+volumes:
+  caddy_data:
+  caddy_config:

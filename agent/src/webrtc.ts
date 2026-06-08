@@ -6,6 +6,12 @@ export interface Sender {
   send(obj: any): void;
 }
 
+export interface IceServer {
+  urls: string;
+  username?: string;
+  credential?: string;
+}
+
 interface Peer {
   clientId: string;
   pc: RTCPeerConnection;
@@ -21,7 +27,7 @@ export class WebRTCHub {
   private current?: Peer;
   private sender!: Sender;
 
-  constructor(private readonly scrcpy: Scrcpy, private readonly stunUrl: string) {}
+  constructor(private readonly scrcpy: Scrcpy, private readonly iceServers: IceServer[]) {}
 
   setSender(s: Sender) {
     this.sender = s;
@@ -50,7 +56,7 @@ export class WebRTCHub {
       rtcpFeedback: [{ type: 'nack' }, { type: 'nack', parameter: 'pli' }, { type: 'goog-remb' }],
       parameters: 'level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f',
     });
-    const pc = new RTCPeerConnection({ iceServers: [{ urls: this.stunUrl }], codecs: { video: [h264] } });
+    const pc = new RTCPeerConnection({ iceServers: this.iceServers, codecs: { video: [h264] } });
 
     const track = new MediaStreamTrack({ kind: 'video' });
     pc.addTransceiver(track, { direction: 'sendonly' });

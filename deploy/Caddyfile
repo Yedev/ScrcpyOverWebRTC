@@ -1,0 +1,23 @@
+# Caddy 自动为 {$DOMAIN} 申请并续期 Let's Encrypt 证书。
+# 需要：域名 A 记录指向本机，且 80/443 公网可达。
+{$DOMAIN} {
+	encode gzip
+
+	# REST API → 后端
+	handle /api/* {
+		reverse_proxy {$BACKEND_ORIGIN}
+	}
+
+	# WebSocket（/ws/stream 中继、/ws/agent 与 /ws/signal 信令）→ 后端
+	# reverse_proxy 自动处理 Upgrade 升级
+	handle /ws/* {
+		reverse_proxy {$BACKEND_ORIGIN}
+	}
+
+	# 其余：前端 SPA 静态资源 + 路由回退
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

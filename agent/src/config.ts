@@ -12,6 +12,9 @@ export interface AgentConfig {
   maxFps: number;
   maxSize: number;
   stunUrl: string;
+  turnUrl: string;
+  turnUsername: string;
+  turnCredential: string;
 }
 
 /** 解析配置：命令行 --key value 优先，其次环境变量，最后默认值 */
@@ -41,5 +44,8 @@ export function loadConfig(argv: string[]): AgentConfig {
     maxFps: parseInt(pick('max-fps', 'MAX_FPS', '0'), 10),
     maxSize: parseInt(pick('max-size', 'MAX_SIZE', '0'), 10),
     stunUrl: pick('stun', 'STUN_URL', 'stun:stun.l.google.com:19302'),
+    turnUrl: pick('turn', 'TURN_URL', ''),
+    turnUsername: pick('turn-user', 'TURN_USERNAME', ''),
+    turnCredential: pick('turn-pass', 'TURN_CREDENTIAL', ''),
   };
 }
