@@ -1,0 +1,22 @@
+{
+  "name": "cloudphone-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CloudPhone 设备侧 WebRTC agent (Node/TS, werift) — 连 scrcpy 出图，与浏览器 P2P 直连",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "werift": "^0.20.0",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/ws": "^8.5.10",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

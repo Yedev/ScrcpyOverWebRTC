@@ -3,6 +3,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import Login from './pages/Login';
 import DeviceList from './pages/DeviceList';
 import DeviceControl from './pages/DeviceControl';
+import P2pControl from './pages/P2pControl';
 
 export default function App() {
   return (
@@ -21,6 +22,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <DeviceControl />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/p2p/:serial"
+        element={
+          <ProtectedRoute>
+            <P2pControl />
           </ProtectedRoute>
         }
       />

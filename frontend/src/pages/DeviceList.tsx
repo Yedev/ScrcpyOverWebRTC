@@ -4,10 +4,17 @@ import { api } from '../api/client';
 import { useAuth } from '../store/auth';
 import { DeviceInfo } from '../types';
 
+interface P2pAgent {
+  deviceId: string;
+  name: string;
+  connectedAt: string;
+}
+
 export default function DeviceList() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
+  const [agents, setAgents] = useState<P2pAgent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -15,10 +22,12 @@ export default function DeviceList() {
     setLoading(true);
     setError('');
     try {
-      const list = await api<DeviceInfo[]>(refresh ? '/devices/refresh' : '/devices', {
-        method: refresh ? 'POST' : 'GET',
-      });
+      const [list, p2p] = await Promise.all([
+        api<DeviceInfo[]>(refresh ? '/devices/refresh' : '/devices', { method: refresh ? 'POST' : 'GET' }),
+        api<P2pAgent[]>('/agents').catch(() => [] as P2pAgent[]),
+      ]);
       setDevices(list);
+      setAgents(p2p);
     } catch (e: any) {
       setError(e?.message || '加载失败');
     } finally {
@@ -53,7 +62,35 @@ export default function DeviceList() {
       </div>
 
       <div className="container">
-        <h2>设备 ({devices.length})</h2>
+        {agents.length > 0 && (
+          <>
+            <h2>P2P 设备 · WebRTC 直连 ({agents.length})</h2>
+            <div className="grid" style={{ marginBottom: 28 }}>
+              {agents.map((a) => (
+                <div className="device-card" key={a.deviceId}>
+                  <div className="row">
+                    <h3>{a.name}</h3>
+                    <div className="spacer" />
+                    <span className="badge mock">P2P</span>
+                  </div>
+                  <div className="muted" style={{ fontSize: 12 }}>{a.deviceId}</div>
+                  <div className="muted" style={{ fontSize: 12, margin: '8px 0' }}>
+                    agent 在线 · {new Date(a.connectedAt).toLocaleTimeString()}
+                  </div>
+                  <div className="row">
+                    <span className="badge online">online</span>
+                    <div className="spacer" />
+                    <button className="primary" onClick={() => navigate(`/p2p/${encodeURIComponent(a.deviceId)}`)}>
+                      P2P 连接
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        <h2>设备 · WS 中继 ({devices.length})</h2>
         {error && <div className="error">{error}</div>}
         {loading && <p className="muted">加载中…</p>}
         {!loading && devices.length === 0 && (

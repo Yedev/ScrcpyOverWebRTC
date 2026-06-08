@@ -23,7 +23,17 @@
 
 - **视频**：设备上的 `scrcpy-server.jar` 编码 H.264 → 经 adb socket 到后端 → 后端经 WebSocket 二进制帧中转给浏览器 → 浏览器用 **WebCodecs** 解码渲染。
 - **控制**：浏览器把触摸/按键封装成 **JSON** 指令经 WebSocket 发给后端 → 后端翻译成 scrcpy 二进制控制协议写回设备。
-- **中继模型**：媒体经过后端（非 P2P）。局域网/隧道场景延迟低、部署简单；若需真·P2P 直连穿 CGNAT，见 `docs/ARCHITECTURE.md` 的 WebRTC 升级路线。
+- **中继模型**：媒体经过后端（非 P2P）。局域网/隧道场景延迟低、部署简单。
+
+### 两种连接方式
+本项目同时提供两条传输路径，可按场景选用：
+
+| 方式 | 路径 | 适合 | 组件 |
+|------|------|------|------|
+| **WS 中继** | 浏览器 ↔ 后端 ↔ 设备(adb) | 局域网/隧道，部署最简单 | `backend/streaming` |
+| **WebRTC P2P** | 浏览器 ↔ agent **直连**（后端只信令） | 低延迟、穿 NAT，复刻原项目直连 | `backend/signaling` + `agent/` |
+
+P2P 模式下，在装有 adb 的机器上运行 `agent/`，它会注册到后端；网页设备列表的「P2P 设备」区点连接即走 WebRTC 直连，视频用浏览器原生 `<video>` 播放、控制走 DataChannel。详见 `agent/README.md`。
 
 ## 目录结构
 
@@ -35,8 +45,10 @@
 │   │   ├── users/      # 用户管理（bcrypt，JSON 存储，可换 DB）
 │   │   ├── devices/    # 设备注册表 + ADB 封装
 │   │   ├── streaming/  # WebSocket 网关：视频中继 + 控制翻译
+│   │   ├── signaling/  # WebRTC 信令：agent 注册 + offer/answer/ICE 中转
 │   │   └── config/
 │   └── assets/         # 放置 scrcpy-server.jar（见下）
+├── agent/              # 设备侧 WebRTC agent (Node/TS, werift) — P2P 直连
 ├── frontend/           # React + Vite + TS
 │   └── src/
 │       ├── pages/      # Login / DeviceList / DeviceControl

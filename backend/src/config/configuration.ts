@@ -11,6 +11,31 @@ export interface AppConfig {
   scrcpyServerLocal: string;
   scrcpyVersion: string;
   corsOrigin: string;
+  /** P2P agent 接入信令服务器用的共享密钥 */
+  agentKey: string;
+  /** 下发给浏览器/agent 的 ICE 服务器（STUN/TURN） */
+  iceServers: IceServer[];
+}
+
+export interface IceServer {
+  urls: string;
+  username?: string;
+  credential?: string;
+}
+
+function parseIceServers(): IceServer[] {
+  const servers: IceServer[] = [];
+  const stun = process.env.STUN_URL ?? 'stun:stun.l.google.com:19302';
+  if (stun) servers.push({ urls: stun });
+  const turnUrl = process.env.TURN_URL;
+  if (turnUrl) {
+    servers.push({
+      urls: turnUrl,
+      username: process.env.TURN_USERNAME ?? '',
+      credential: process.env.TURN_CREDENTIAL ?? '',
+    });
+  }
+  return servers;
 }
 
 export default (): AppConfig => ({
@@ -29,4 +54,6 @@ export default (): AppConfig => ({
   scrcpyServerLocal: process.env.SCRCPY_SERVER_LOCAL ?? './assets/scrcpy-server.jar',
   scrcpyVersion: process.env.SCRCPY_VERSION ?? '2.4',
   corsOrigin: process.env.CORS_ORIGIN ?? '*',
+  agentKey: process.env.AGENT_KEY ?? 'dev-agent-key',
+  iceServers: parseIceServers(),
 });

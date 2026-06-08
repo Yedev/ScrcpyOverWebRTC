@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { DevicesModule } from './devices/devices.module';
 import { StreamingModule } from './streaming/streaming.module';
+import { SignalingModule } from './signaling/signaling.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { StreamingModule } from './streaming/streaming.module';
     AuthModule,
     DevicesModule,
     StreamingModule,
+    SignalingModule,
   ],
 })
 export class AppModule {}
